@@ -340,7 +340,7 @@ async def login(request: LoginRequest):
 async def verify_otp(request: VerifyOTPRequest):
     """Verify OTP and return user token"""
     try:
-        user = await db.users.find_one({"phone": request.phone})
+        user = await db.users.find_one({"phone": request.phone}, {"_id": 0})
         
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
