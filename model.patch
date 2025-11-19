@@ -1,0 +1,302 @@
+diff --git a/focused_test.py b/focused_test.py
+new file mode 100644
+index 0000000..151fc76
+--- /dev/null
++++ b/focused_test.py
+@@ -0,0 +1,147 @@
++#!/usr/bin/env python3
++"""
++Focused test for the failing endpoints
++"""
++
++import requests
++import json
++import uuid
++
++BACKEND_URL = "https://mediclock-5.preview.emergentagent.com/api"
++
++def test_reminder_logs_issue():
++    """Test the reminder logs endpoint that's failing"""
++    # First create a test patient and prescription
++    session = requests.Session()
++    
++    # Login
++    login_resp = session.post(f"{BACKEND_URL}/auth/login", json={"phone": "+1234567890"})
++    if login_resp.status_code != 200:
++        print("❌ Login failed")
++        return
++    
++    otp = login_resp.json()["otp"]
++    
++    # Verify
++    verify_resp = session.post(f"{BACKEND_URL}/auth/verify", json={"phone": "+1234567890", "otp": otp})
++    if verify_resp.status_code != 200:
++        print("❌ Verify failed")
++        return
++    
++    user_id = verify_resp.json()["user"]["id"]
++    
++    # Create patient
++    patient_resp = session.post(f"{BACKEND_URL}/patients", json={
++        "user_id": user_id,
++        "name": "Test Patient",
++        "dob": "1980-01-01",
++        "gender": "male"
++    })
++    
++    if patient_resp.status_code != 200:
++        print("❌ Patient creation failed")
++        return
++    
++    patient_id = patient_resp.json()["patient"]["id"]
++    
++    # Add prescription
++    prescription_resp = session.post(f"{BACKEND_URL}/prescriptions", json={
++        "patient_id": patient_id,
++        "medication_name": "Test Medicine",
++        "dosage": "10mg",
++        "frequency": "once",
++        "schedule": {"times": ["08:00"], "days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]},
++        "start_date": "2024-01-01",
++        "current_stock": 30,
++        "total_per_refill": 30
++    })
++    
++    if prescription_resp.status_code != 200:
++        print("❌ Prescription creation failed")
++        return
++    
++    prescription_id = prescription_resp.json()["prescription"]["id"]
++    
++    # Log a reminder
++    log_resp = session.post(f"{BACKEND_URL}/reminders/log", json={
++        "prescription_id": prescription_id,
++        "patient_id": patient_id,
++        "action": "took",
++        "note": "Test reminder"
++    })
++    
++    if log_resp.status_code != 200:
++        print("❌ Reminder log failed")
++        return
++    
++    print("✅ Reminder logged successfully")
++    
++    # Now try to get reminder logs - this is where it fails
++    logs_resp = session.get(f"{BACKEND_URL}/reminders/logs/patient/{patient_id}")
++    
++    print(f"Reminder logs response: {logs_resp.status_code}")
++    if logs_resp.status_code == 200:
++        print("✅ Reminder logs retrieved successfully")
++        print(f"Response: {logs_resp.json()}")
++    else:
++        print(f"❌ Reminder logs failed: {logs_resp.text}")
++
++def test_ai_assistant():
++    """Test AI assistant with correct medication name"""
++    session = requests.Session()
++    
++    payload = {
++        "medication_name": "Metformin 500mg",
++        "query_type": "summary",
++        "language": "en"
++    }
++    
++    response = session.post(f"{BACKEND_URL}/ai/explain", json=payload)
++    
++    if response.status_code == 200:
++        data = response.json()
++        if data.get("success"):
++            print("✅ AI Assistant working correctly")
++            print(f"Explanation length: {len(data.get('explanation', ''))}")
++        else:
++            print(f"❌ AI Assistant failed: {data}")
++    else:
++        print(f"❌ AI Assistant HTTP error: {response.status_code} - {response.text}")
++
++def test_ocr_with_better_image():
++    """Test OCR with a better base64 image"""
++    session = requests.Session()
++    
++    # Create a simple white 100x100 PNG image in base64
++    # This is a minimal valid PNG
++    better_image_b64 = "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwA/wA=="
++    
++    payload = {
++        "image_base64": better_image_b64,
++        "patient_id": "test-patient-id"
++    }
++    
++    response = session.post(f"{BACKEND_URL}/ocr/recognize", json=payload)
++    
++    if response.status_code == 200:
++        data = response.json()
++        if data.get("success"):
++            print("✅ OCR working correctly")
++            print(f"Extracted: {data.get('extracted', {})}")
++        else:
++            print(f"❌ OCR failed: {data}")
++    else:
++        print(f"❌ OCR HTTP error: {response.status_code} - {response.text}")
++
++if __name__ == "__main__":
++    print("🔍 Running focused tests on failing endpoints...")
++    print("=" * 50)
++    
++    print("\n1. Testing Reminder Logs Issue:")
++    test_reminder_logs_issue()
++    
++    print("\n2. Testing AI Assistant:")
++    test_ai_assistant()
++    
++    print("\n3. Testing OCR:")
++    test_ocr_with_better_image()
+\ No newline at end of file
+diff --git a/test_result.md b/test_result.md
+index 0791d34..e5aad35 100644
+--- a/test_result.md
++++ b/test_result.md
+@@ -111,11 +111,14 @@ backend:
+     file: "/app/backend/server.py"
+     stuck_count: 0
+     priority: "high"
+-    needs_retesting: true
++    needs_retesting: false
+     status_history:
+       - working: true
+         agent: "main"
+         comment: "Implemented OTP-based authentication with phone number. OTP generation and verification endpoints created."
++      - working: true
++        agent: "testing"
++        comment: "✅ TESTED: Auth endpoints working perfectly. Login generates OTP, verify returns valid token and user data. Full authentication flow tested successfully."
+   
+   - task: "Patient profile management"
+     implemented: true
+@@ -123,11 +126,14 @@ backend:
+     file: "/app/backend/server.py"
+     stuck_count: 0
+     priority: "high"
+-    needs_retesting: true
++    needs_retesting: false
+     status_history:
+       - working: true
+         agent: "main"
+         comment: "Created patient CRUD endpoints with emergency contacts, allergies, conditions."
++      - working: true
++        agent: "testing"
++        comment: "✅ TESTED: Patient CRUD operations working correctly. Create, read, update all tested with realistic data including allergies, conditions, emergency contacts."
+   
+   - task: "Medication database & search"
+     implemented: true
+@@ -135,11 +141,14 @@ backend:
+     file: "/app/backend/server.py"
+     stuck_count: 0
+     priority: "high"
+-    needs_retesting: true
++    needs_retesting: false
+     status_history:
+       - working: true
+         agent: "main"
+         comment: "Seeded 10 common medications. Search endpoint working with regex. Fixed MongoDB ObjectId serialization."
++      - working: true
++        agent: "testing"
++        comment: "✅ TESTED: Medication search working correctly. Database seeded with 10 medications, search by name/generic name works, returns proper JSON format."
+   
+   - task: "Prescription management"
+     implemented: true
+@@ -147,47 +156,59 @@ backend:
+     file: "/app/backend/server.py"
+     stuck_count: 0
+     priority: "high"
+-    needs_retesting: true
++    needs_retesting: false
+     status_history:
+       - working: true
+         agent: "main"
+         comment: "Add/get/update/delete prescriptions. Stock tracking. Schedule configuration."
++      - working: true
++        agent: "testing"
++        comment: "✅ TESTED: Prescription management fully functional. Add/get/update stock/delete all working. Stock auto-decrements when medication taken."
+   
+   - task: "Reminder logging & adherence tracking"
+     implemented: true
+-    working: true
++    working: false
+     file: "/app/backend/server.py"
+-    stuck_count: 0
++    stuck_count: 1
+     priority: "high"
+-    needs_retesting: true
++    needs_retesting: false
+     status_history:
+       - working: true
+         agent: "main"
+         comment: "Log took/missed/snoozed actions. Calculate adherence stats. Auto-decrement stock."
++      - working: false
++        agent: "testing"
++        comment: "❌ CRITICAL ISSUE: Reminder logging works but GET /api/reminders/logs/patient/{id} returns 500 Internal Server Error. MongoDB ObjectId serialization issue in FastAPI response. Adherence stats endpoint works correctly. Stock decrements properly when logging 'took' action."
+   
+   - task: "OCR with OpenAI Vision"
+     implemented: true
+-    working: "NA"
++    working: false
+     file: "/app/backend/server.py"
+-    stuck_count: 0
++    stuck_count: 1
+     priority: "high"
+-    needs_retesting: true
++    needs_retesting: false
+     status_history:
+       - working: "NA"
+         agent: "main"
+         comment: "Implemented OCR endpoint using OpenAI GPT-4 Vision. Returns extracted data and candidate matches. Needs testing with real images."
++      - working: false
++        agent: "testing"
++        comment: "❌ CRITICAL ISSUE: OCR endpoint returns 500 error - 'You uploaded an unsupported image. Please make sure your image is valid.' OpenAI Vision API rejecting base64 images. Tested with multiple image formats, all fail. LLM integration working but image validation failing."
+   
+   - task: "AI Assistant (medicine explanations)"
+     implemented: true
+-    working: "NA"
++    working: true
+     file: "/app/backend/server.py"
+     stuck_count: 0
+     priority: "high"
+-    needs_retesting: true
++    needs_retesting: false
+     status_history:
+       - working: "NA"
+         agent: "main"
+         comment: "Implemented AI explanation endpoint with GPT-4. Supports summary, interactions, dosage, side_effects queries. Needs testing."
++      - working: true
++        agent: "testing"
++        comment: "✅ TESTED: AI Assistant working perfectly. GPT-4 integration successful, generates detailed medication explanations with proper disclaimers. Tested with 'Metformin 500mg' - returns comprehensive summary with usage, dosage, warnings."
+ 
+ frontend:
+   - task: "Authentication flow (Login/OTP/Verify)"
+@@ -294,14 +315,16 @@ metadata:
+ 
+ test_plan:
+   current_focus:
+-    - "Auth system (OTP login/verification)"
+-    - "Medication database & search"
+-    - "Prescription management"
+-    - "Add medication (manual)"
+-  stuck_tasks: []
+-  test_all: true
+-  test_priority: "high_first"
++    - "Reminder logging & adherence tracking"
++    - "OCR with OpenAI Vision"
++  stuck_tasks:
++    - "Reminder logging & adherence tracking"
++    - "OCR with OpenAI Vision"
++  test_all: false
++  test_priority: "stuck_first"
+ 
+ agent_communication:
+   - agent: "main"
+-    message: "Phase 1 MVP implementation complete. Built full-stack medicine reminder with auth, patient profiles, medication management, reminder logging, adherence tracking, OCR (OpenAI Vision), AI assistant (GPT-4). Backend: FastAPI with all CRUD endpoints, MongoDB seeded with 10 medications, Emergent LLM key integrated. Frontend: Expo app with tab navigation, all screens, camera OCR. Ready for comprehensive backend testing."
+\ No newline at end of file
++    message: "Phase 1 MVP implementation complete. Built full-stack medicine reminder with auth, patient profiles, medication management, reminder logging, adherence tracking, OCR (OpenAI Vision), AI assistant (GPT-4). Backend: FastAPI with all CRUD endpoints, MongoDB seeded with 10 medications, Emergent LLM key integrated. Frontend: Expo app with tab navigation, all screens, camera OCR. Ready for comprehensive backend testing."
++  - agent: "testing"
++    message: "✅ BACKEND TESTING COMPLETE: 87.5% success rate (14/16 endpoints working). ✅ WORKING: Auth (login/verify), Patient CRUD, Medication search, Prescription management, AI Assistant, Adherence stats. ❌ CRITICAL ISSUES: 1) GET /api/reminders/logs returns 500 error due to MongoDB ObjectId serialization in FastAPI response 2) OCR endpoint fails - OpenAI Vision API rejecting base64 images with 'unsupported image' error. Both issues need immediate attention before production deployment."
+\ No newline at end of file
