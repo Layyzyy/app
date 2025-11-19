@@ -344,7 +344,7 @@ class MediMinderTester:
         """Test AI assistant explanation"""
         try:
             payload = {
-                "medication_name": "Metformin",
+                "medication_name": "Metformin 500mg",
                 "query_type": "summary",
                 "language": "en"
             }
