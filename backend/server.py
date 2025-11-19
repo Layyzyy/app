@@ -589,7 +589,7 @@ async def get_reminder_logs(patient_id: str, days: int = 30):
         logs = await db.reminder_logs.find({
             "patient_id": patient_id,
             "created_at": {"$gte": since}
-        }).sort("created_at", -1).to_list(1000)
+        }, {"_id": 0}).sort("created_at", -1).to_list(1000)
         
         return {"success": True, "logs": logs}
     except Exception as e:
