@@ -307,7 +307,7 @@ async def login(request: LoginRequest):
         expires_at = datetime.utcnow() + timedelta(minutes=10)
         
         # Check if user exists
-        user = await db.users.find_one({"phone": request.phone})
+        user = await db.users.find_one({"phone": request.phone}, {"_id": 0})
         
         if user:
             # Update existing user with new OTP
@@ -391,7 +391,7 @@ async def create_patient(request: CreatePatientRequest):
 async def get_patient(patient_id: str):
     """Get patient details"""
     try:
-        patient = await db.patients.find_one({"id": patient_id})
+        patient = await db.patients.find_one({"id": patient_id}, {"_id": 0})
         if not patient:
             raise HTTPException(status_code=404, detail="Patient not found")
         return {"success": True, "patient": patient}
@@ -439,7 +439,7 @@ async def search_medications(q: str = ""):
 async def get_medication(medication_id: str):
     """Get medication details"""
     try:
-        medication = await db.medications.find_one({"id": medication_id})
+        medication = await db.medications.find_one({"id": medication_id}, {"_id": 0})
         if not medication:
             raise HTTPException(status_code=404, detail="Medication not found")
         return {"success": True, "medication": medication}
@@ -498,7 +498,7 @@ async def add_prescription(request: AddMedicationRequest):
 async def get_patient_prescriptions(patient_id: str):
     """Get all prescriptions for a patient"""
     try:
-        prescriptions = await db.prescriptions.find({"patient_id": patient_id}).to_list(100)
+        prescriptions = await db.prescriptions.find({"patient_id": patient_id}, {"_id": 0}).to_list(100)
         return {"success": True, "prescriptions": prescriptions}
     except Exception as e:
         logger.error(f"Get prescriptions error: {str(e)}")
@@ -508,7 +508,7 @@ async def get_patient_prescriptions(patient_id: str):
 async def get_prescription(prescription_id: str):
     """Get a specific prescription"""
     try:
-        prescription = await db.prescriptions.find_one({"id": prescription_id})
+        prescription = await db.prescriptions.find_one({"id": prescription_id}, {"_id": 0})
         if not prescription:
             raise HTTPException(status_code=404, detail="Prescription not found")
         return {"success": True, "prescription": prescription}
@@ -568,7 +568,7 @@ async def log_reminder_action(request: LogReminderRequest):
         
         # Update stock if medication was taken
         if request.action == "took":
-            prescription = await db.prescriptions.find_one({"id": request.prescription_id})
+            prescription = await db.prescriptions.find_one({"id": request.prescription_id}, {"_id": 0})
             if prescription and prescription["current_stock"] > 0:
                 new_stock = prescription["current_stock"] - 1
                 await db.prescriptions.update_one(
@@ -721,7 +721,7 @@ async def explain_medicine(request: AIQuery):
         # Get medication details
         medication = None
         if request.medication_id:
-            medication = await db.medications.find_one({"id": request.medication_id})
+            medication = await db.medications.find_one({"id": request.medication_id}, {"_id": 0})
         elif request.medication_name:
             medication = await db.medications.find_one({
                 "name": {"$regex": f"^{request.medication_name}$", "$options": "i"}
