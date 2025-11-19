@@ -429,7 +429,7 @@ async def search_medications(q: str = ""):
             {"generic_name": {"$regex": q, "$options": "i"}}
         ]} if q else {}
         
-        medications = await db.medications.find(query).limit(20).to_list(20)
+        medications = await db.medications.find(query, {"_id": 0}).limit(20).to_list(20)
         return {"success": True, "medications": medications}
     except Exception as e:
         logger.error(f"Search medications error: {str(e)}")
