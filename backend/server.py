@@ -682,7 +682,7 @@ async def recognize_medicine(request: OCRRequest):
         if extracted.get("medicine_name") and extracted.get("medicine_name") != "Unknown":
             meds = await db.medications.find({
                 "name": {"$regex": extracted["medicine_name"], "$options": "i"}
-            }).limit(3).to_list(3)
+            }, {"_id": 0}).limit(3).to_list(3)
             
             candidates = [
                 {
