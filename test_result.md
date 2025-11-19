@@ -111,11 +111,14 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
         comment: "Implemented OTP-based authentication with phone number. OTP generation and verification endpoints created."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Auth endpoints working perfectly. Login generates OTP, verify returns valid token and user data. Full authentication flow tested successfully."
   
   - task: "Patient profile management"
     implemented: true
@@ -123,11 +126,14 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
         comment: "Created patient CRUD endpoints with emergency contacts, allergies, conditions."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Patient CRUD operations working correctly. Create, read, update all tested with realistic data including allergies, conditions, emergency contacts."
   
   - task: "Medication database & search"
     implemented: true
@@ -135,11 +141,14 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
         comment: "Seeded 10 common medications. Search endpoint working with regex. Fixed MongoDB ObjectId serialization."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Medication search working correctly. Database seeded with 10 medications, search by name/generic name works, returns proper JSON format."
   
   - task: "Prescription management"
     implemented: true
@@ -147,47 +156,59 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
         comment: "Add/get/update/delete prescriptions. Stock tracking. Schedule configuration."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Prescription management fully functional. Add/get/update stock/delete all working. Stock auto-decrements when medication taken."
   
   - task: "Reminder logging & adherence tracking"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Log took/missed/snoozed actions. Calculate adherence stats. Auto-decrement stock."
+      - working: false
+        agent: "testing"
+        comment: "❌ CRITICAL ISSUE: Reminder logging works but GET /api/reminders/logs/patient/{id} returns 500 Internal Server Error. MongoDB ObjectId serialization issue in FastAPI response. Adherence stats endpoint works correctly. Stock decrements properly when logging 'took' action."
+  
+  - task: "OCR with OpenAI Vision"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented OCR endpoint using OpenAI GPT-4 Vision. Returns extracted data and candidate matches. Needs testing with real images."
+      - working: false
+        agent: "testing"
+        comment: "❌ CRITICAL ISSUE: OCR endpoint returns 500 error - 'You uploaded an unsupported image. Please make sure your image is valid.' OpenAI Vision API rejecting base64 images. Tested with multiple image formats, all fail. LLM integration working but image validation failing."
+  
+  - task: "AI Assistant (medicine explanations)"
     implemented: true
     working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
-    status_history:
-      - working: true
-        agent: "main"
-        comment: "Log took/missed/snoozed actions. Calculate adherence stats. Auto-decrement stock."
-  
-  - task: "OCR with OpenAI Vision"
-    implemented: true
-    working: "NA"
-    file: "/app/backend/server.py"
-    stuck_count: 0
-    priority: "high"
-    needs_retesting: true
-    status_history:
-      - working: "NA"
-        agent: "main"
-        comment: "Implemented OCR endpoint using OpenAI GPT-4 Vision. Returns extracted data and candidate matches. Needs testing with real images."
-  
-  - task: "AI Assistant (medicine explanations)"
-    implemented: true
-    working: "NA"
-    file: "/app/backend/server.py"
-    stuck_count: 0
-    priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implemented AI explanation endpoint with GPT-4. Supports summary, interactions, dosage, side_effects queries. Needs testing."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: AI Assistant working perfectly. GPT-4 integration successful, generates detailed medication explanations with proper disclaimers. Tested with 'Metformin 500mg' - returns comprehensive summary with usage, dosage, warnings."
 
 frontend:
   - task: "Authentication flow (Login/OTP/Verify)"
