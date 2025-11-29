@@ -5,14 +5,17 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Switch,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function Profile() {
   const { user, patient, logout } = useAuth();
+  const { colors, isDark, toggleTheme } = useTheme();
   const router = useRouter();
 
   const handleLogout = () => {
@@ -56,6 +59,8 @@ export default function Profile() {
     },
   ];
 
+  const styles = createStyles(colors);
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -63,7 +68,6 @@ export default function Profile() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Profile Header */}
         <View style={styles.profileHeader}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>
@@ -74,13 +78,12 @@ export default function Profile() {
           <Text style={styles.userRole}>{user?.role || 'Patient'}</Text>
         </View>
 
-        {/* Profile Info */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Personal Information</Text>
           {profileItems.map((item, index) => (
             <View key={index} style={styles.infoRow}>
               <View style={styles.infoLeft}>
-                <Ionicons name={item.icon as any} size={24} color="#0B6EFF" />
+                <Ionicons name={item.icon as any} size={24} color={colors.primary} />
                 <Text style={styles.infoLabel}>{item.label}</Text>
               </View>
               <Text style={styles.infoValue}>{item.value}</Text>
@@ -88,12 +91,11 @@ export default function Profile() {
           ))}
         </View>
 
-        {/* Emergency Contact */}
         {patient?.emergency_contact && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Emergency Contact</Text>
             <View style={styles.emergencyCard}>
-              <Ionicons name="medical" size={32} color="#FF4D4F" />
+              <Ionicons name="medical" size={32} color={colors.error} />
               <View style={styles.emergencyInfo}>
                 <Text style={styles.emergencyName}>
                   {patient.emergency_contact.name}
@@ -106,7 +108,6 @@ export default function Profile() {
           </View>
         )}
 
-        {/* Medical Info */}
         {(patient?.allergies?.length > 0 || patient?.conditions?.length > 0) && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Medical Information</Text>
@@ -131,30 +132,56 @@ export default function Profile() {
           </View>
         )}
 
-        {/* Actions */}
         <View style={styles.section}>
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="settings-outline" size={24} color="#333" />
-            <Text style={styles.actionButtonText}>Settings</Text>
-            <Ionicons name="chevron-forward" size={24} color="#999" />
+          <Text style={styles.sectionTitle}>Preferences</Text>
+          
+          <View style={styles.settingRow}>
+            <View style={styles.settingLeft}>
+              <Ionicons name="moon" size={24} color={colors.primary} />
+              <Text style={styles.settingLabel}>Dark Mode</Text>
+            </View>
+            <Switch
+              value={isDark}
+              onValueChange={toggleTheme}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Settings</Text>
+          
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => router.push('/settings/history')}
+          >
+            <Ionicons name="time-outline" size={24} color={colors.text} />
+            <Text style={styles.actionButtonText}>Medication History</Text>
+            <Ionicons name="chevron-forward" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="help-circle-outline" size={24} color="#333" />
+            <Ionicons name="notifications-outline" size={24} color={colors.text} />
+            <Text style={styles.actionButtonText}>Notifications</Text>
+            <Ionicons name="chevron-forward" size={24} color={colors.textSecondary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.actionButton}>
+            <Ionicons name="help-circle-outline" size={24} color={colors.text} />
             <Text style={styles.actionButtonText}>Help & Support</Text>
-            <Ionicons name="chevron-forward" size={24} color="#999" />
+            <Ionicons name="chevron-forward" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="information-circle-outline" size={24} color="#333" />
+            <Ionicons name="information-circle-outline" size={24} color={colors.text} />
             <Text style={styles.actionButtonText}>About</Text>
-            <Ionicons name="chevron-forward" size={24} color="#999" />
+            <Ionicons name="chevron-forward" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
-        {/* Logout Button */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={24} color="#FF4D4F" />
+          <Ionicons name="log-out-outline" size={24} color={colors.error} />
           <Text style={styles.logoutButtonText}>Logout</Text>
         </TouchableOpacity>
 
@@ -164,156 +191,175 @@ export default function Profile() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-  },
-  header: {
-    padding: 20,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  content: {
-    padding: 20,
-  },
-  profileHeader: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  avatar: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: '#0B6EFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  avatarText: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  patientName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
-  },
-  userRole: {
-    fontSize: 16,
-    color: '#666',
-    textTransform: 'capitalize',
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 12,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 8,
-  },
-  infoLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  infoLabel: {
-    fontSize: 16,
-    color: '#666',
-  },
-  infoValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-  },
-  emergencyCard: {
-    flexDirection: 'row',
-    backgroundColor: '#FFF5F5',
-    padding: 16,
-    borderRadius: 12,
-    gap: 16,
-  },
-  emergencyInfo: {
-    flex: 1,
-  },
-  emergencyName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
-  },
-  emergencyPhone: {
-    fontSize: 16,
-    color: '#666',
-  },
-  medicalItem: {
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 8,
-  },
-  medicalLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
-  },
-  medicalValue: {
-    fontSize: 16,
-    color: '#333',
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 8,
-    gap: 12,
-  },
-  actionButtonText: {
-    flex: 1,
-    fontSize: 16,
-    color: '#333',
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 12,
-    gap: 8,
-    borderWidth: 2,
-    borderColor: '#FF4D4F',
-    marginTop: 16,
-  },
-  logoutButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FF4D4F',
-  },
-  versionText: {
-    textAlign: 'center',
-    fontSize: 12,
-    color: '#999',
-    marginTop: 24,
-  },
-});
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      padding: 20,
+      backgroundColor: colors.card,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: colors.text,
+    },
+    content: {
+      padding: 20,
+    },
+    profileHeader: {
+      alignItems: 'center',
+      marginBottom: 32,
+    },
+    avatar: {
+      width: 96,
+      height: 96,
+      borderRadius: 48,
+      backgroundColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 16,
+    },
+    avatarText: {
+      fontSize: 48,
+      fontWeight: 'bold',
+      color: '#FFFFFF',
+    },
+    patientName: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: colors.text,
+      marginBottom: 4,
+    },
+    userRole: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      textTransform: 'capitalize',
+    },
+    section: {
+      marginBottom: 24,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: colors.text,
+      marginBottom: 12,
+    },
+    infoRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      backgroundColor: colors.card,
+      padding: 16,
+      borderRadius: 12,
+      marginBottom: 8,
+    },
+    infoLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    infoLabel: {
+      fontSize: 16,
+      color: colors.textSecondary,
+    },
+    infoValue: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    emergencyCard: {
+      flexDirection: 'row',
+      backgroundColor: colors.error + '15',
+      padding: 16,
+      borderRadius: 12,
+      gap: 16,
+    },
+    emergencyInfo: {
+      flex: 1,
+    },
+    emergencyName: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: colors.text,
+      marginBottom: 4,
+    },
+    emergencyPhone: {
+      fontSize: 16,
+      color: colors.textSecondary,
+    },
+    medicalItem: {
+      backgroundColor: colors.card,
+      padding: 16,
+      borderRadius: 12,
+      marginBottom: 8,
+    },
+    medicalLabel: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginBottom: 4,
+    },
+    medicalValue: {
+      fontSize: 16,
+      color: colors.text,
+    },
+    settingRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      backgroundColor: colors.card,
+      padding: 16,
+      borderRadius: 12,
+      marginBottom: 8,
+    },
+    settingLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    settingLabel: {
+      fontSize: 16,
+      color: colors.text,
+    },
+    actionButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.card,
+      padding: 16,
+      borderRadius: 12,
+      marginBottom: 8,
+      gap: 12,
+    },
+    actionButtonText: {
+      flex: 1,
+      fontSize: 16,
+      color: colors.text,
+    },
+    logoutButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.card,
+      padding: 16,
+      borderRadius: 12,
+      gap: 8,
+      borderWidth: 2,
+      borderColor: colors.error,
+      marginTop: 16,
+    },
+    logoutButtonText: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: colors.error,
+    },
+    versionText: {
+      textAlign: 'center',
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 24,
+    },
+  });
