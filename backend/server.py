@@ -47,6 +47,7 @@ class User(BaseModel):
     name: str
     role: str = "patient"  # patient, caregiver, pharmacist, doctor, admin
     password_hash: Optional[str] = None
+    dark_mode: bool = False
     created_at: datetime = Field(default_factory=datetime.utcnow)
     otp: Optional[str] = None
     otp_expires_at: Optional[datetime] = None
@@ -87,8 +88,10 @@ class Prescription(BaseModel):
     frequency: str  # once, twice, thrice, custom
     schedule: Dict[str, Any]  # {times: ["08:00", "20:00"], days: ["Mon", "Tue", ...]}
     instructions: Optional[str] = None
+    description: Optional[str] = None
     start_date: str
     end_date: Optional[str] = None
+    expiry_date: Optional[str] = None
     current_stock: int = 0
     total_per_refill: int = 0
     with_food: bool = False
@@ -101,6 +104,7 @@ class ReminderLog(BaseModel):
     scheduled_at: datetime
     action: str  # took, missed, snoozed, pending
     action_at: Optional[datetime] = None
+    with_food_confirmed: Optional[bool] = None
     note: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -141,10 +145,12 @@ class AddMedicationRequest(BaseModel):
     frequency: str
     schedule: Dict[str, Any]
     instructions: Optional[str] = None
+    description: Optional[str] = None
     start_date: str
     end_date: Optional[str] = None
-    current_stock: int = 0
-    total_per_refill: int = 0
+    expiry_date: Optional[str] = None
+    current_stock: int = 5
+    total_per_refill: int = 5
     with_food: bool = False
 
 class UpdateStockRequest(BaseModel):
@@ -155,7 +161,11 @@ class LogReminderRequest(BaseModel):
     prescription_id: str
     patient_id: str
     action: str  # took, missed, snoozed
+    with_food_confirmed: Optional[bool] = None
     note: Optional[str] = None
+
+class UpdateDarkModeRequest(BaseModel):
+    dark_mode: bool
 
 # ============= Helper Functions =============
 
@@ -365,13 +375,33 @@ async def verify_otp(request: VerifyOTPRequest):
                 "id": user["id"],
                 "phone": user["phone"],
                 "name": user["name"],
-                "role": user["role"]
+                "role": user["role"],
+                "dark_mode": user.get("dark_mode", False)
             }
         }
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Verify OTP error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============= User Settings =============
+
+@api_router.put("/users/{user_id}/dark-mode")
+async def update_dark_mode(user_id: str, request: UpdateDarkModeRequest):
+    """Update dark mode preference"""
+    try:
+        result = await db.users.update_one(
+            {"id": user_id},
+            {"$set": {"dark_mode": request.dark_mode}}
+        )
+        if result.modified_count == 0:
+            raise HTTPException(status_code=404, detail="User not found")
+        return {"success": True, "dark_mode": request.dark_mode}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Update dark mode error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # ============= Patient Routes =============
@@ -457,19 +487,23 @@ async def add_prescription(request: AddMedicationRequest):
     try:
         # Create or find medication
         medication = await db.medications.find_one(
-            {"name": {"$regex": f"^{request.medication_name}$", "$options": "i"}}
+            {"name": {"$regex": f"^{request.medication_name}$", "$options": "i"}}, {"_id": 0}
         )
         
+        description = request.description
         if not medication:
             # Create new medication entry
             medication = Medication(
                 name=request.medication_name,
-                form="tablet"
+                form="tablet",
+                description=description
             )
             await db.medications.insert_one(medication.dict())
             medication_id = medication.id
         else:
             medication_id = medication["id"]
+            if not description:
+                description = medication.get("description", "")
         
         # Create prescription
         prescription = Prescription(
@@ -480,8 +514,10 @@ async def add_prescription(request: AddMedicationRequest):
             frequency=request.frequency,
             schedule=request.schedule,
             instructions=request.instructions,
+            description=description,
             start_date=request.start_date,
             end_date=request.end_date,
+            expiry_date=request.expiry_date,
             current_stock=request.current_stock,
             total_per_refill=request.total_per_refill,
             with_food=request.with_food
@@ -561,6 +597,7 @@ async def log_reminder_action(request: LogReminderRequest):
             scheduled_at=datetime.utcnow(),
             action=request.action,
             action_at=datetime.utcnow(),
+            with_food_confirmed=request.with_food_confirmed,
             note=request.note
         )
         
@@ -604,7 +641,7 @@ async def get_adherence_stats(patient_id: str, days: int = 7):
         logs = await db.reminder_logs.find({
             "patient_id": patient_id,
             "created_at": {"$gte": since}
-        }).to_list(1000)
+        }, {"_id": 0}).to_list(1000)
         
         total = len(logs)
         took = len([log for log in logs if log["action"] == "took"])
@@ -718,28 +755,33 @@ async def explain_medicine(request: AIQuery):
         if not llm_key:
             raise HTTPException(status_code=500, detail="LLM key not configured")
         
-        # Get medication details
-        medication = None
+        # Get medication name
+        med_name = request.medication_name or ""
+        generic_name = ""
+        
+        # Try to get from database first
         if request.medication_id:
             medication = await db.medications.find_one({"id": request.medication_id}, {"_id": 0})
+            if medication:
+                med_name = medication["name"]
+                generic_name = medication.get("generic_name", "")
         elif request.medication_name:
             medication = await db.medications.find_one({
                 "name": {"$regex": f"^{request.medication_name}$", "$options": "i"}
-            })
-        
-        if not medication:
-            return {
-                "success": False,
-                "message": "Medication not found"
-            }
+            }, {"_id": 0})
+            if medication:
+                generic_name = medication.get("generic_name", "")
         
         # Build context
-        med_name = medication["name"]
-        generic_name = medication.get("generic_name", "")
+        if not med_name:
+            return {
+                "success": False,
+                "message": "Please provide a medication name"
+            }
         
         # Prepare query based on type
         if request.query_type == "summary":
-            query = f"Explain {med_name} ({generic_name}) in simple language suitable for elderly patients. Include: 1) What it's used for, 2) Common dosage, 3) Important warnings. Keep it to 3-4 short bullet points."
+            query = f"Explain {med_name} ({generic_name if generic_name else 'medication'}) in simple language suitable for elderly patients. Include: 1) What it's used for, 2) Common dosage, 3) Important warnings. Keep it to 3-4 short bullet points."
         elif request.query_type == "interactions":
             query = f"What are common drug interactions with {med_name}? Also mention food interactions. Keep it brief and simple."
         elif request.query_type == "dosage":
