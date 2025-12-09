@@ -48,3 +48,28 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+## Deploying to Vercel
+
+This project can be deployed as a static web site on Vercel using Expo's web export.
+
+1. Make sure dependencies are installed at the `app/frontend` folder:
+
+   ```bash
+   npm install
+   ```
+
+2. Locally build the static site (outputs to `web-build`):
+
+   ```bash
+   npm run build
+   ```
+
+3. On Vercel, set the root to the `app/frontend` directory (or deploy the repository and choose the `app/frontend` project). Use the following build settings in the Vercel UI:
+
+   - Build Command: npm run build
+   - Output Directory: web-build
+
+4. If you use environment variables (API keys, feature flags), add them in the Vercel Project Settings.
+
+Notes: Expo web export creates a plain static site. Some Expo/React Native web features may not be fully supported on static hosting — test the exported site locally before deploying.
