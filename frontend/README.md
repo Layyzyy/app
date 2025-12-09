@@ -10,6 +10,9 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm install
    ```
 
+   Note: This project uses yarn as the package manager. Remove any generated `package-lock.json` files and prefer `yarn install` to avoid mixed lockfile issues which can break CI (Vercel uses yarn by default).
+
+   If deploying to Vercel, the project uses `expo export:web` with the webpack bundler. A webpack alias maps `app/` to the app folder so `expo-router` resolves routes during the export.
 2. Start the app
 
    ```bash

@@ -3,13 +3,14 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
-  "start": "expo start",
+    "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo start --android",
     "ios": "expo start --ios",
-  "web": "expo start --web",
-  "build:web": "EXPO_WEB_BUNDLER=webpack expo export:web",
-  "build": "npm run build:web",
+    "web": "expo start --web",
+    "prebuild:web": "rm -rf .metro-cache || true",
+    "build:web": "EXPO_WEB_BUNDLER=webpack expo export:web",
+    "build": "npm run build:web",
     "lint": "expo lint"
   },
   "dependencies": {
@@ -63,7 +64,7 @@
   },
   "private": true,
   "engines": {
-    "node": ">=20.19.4"
+    "node": ">=20.19.4 <21"
   },
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }
